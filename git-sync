@@ -1,0 +1,53 @@
+#!/bin/bash
+
+path="/opt/lampp/htdocs"
+
+# cd into folder
+cd "$path"
+
+# loop through sub-folders
+for site in */; do
+
+    # move into sub-folder
+    cd "$path/$site"
+
+    # if errors changing directory
+    # skip any further process
+    if [$? -ne 0]; then
+        echo "> skipping $site"
+        continue
+    fi
+
+    # check if it's a git repo
+    if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) != "true" ]]; then
+        continue
+    fi
+
+    # so far so good let's stash
+    # any uncomited changes
+    echo "> syncing $site"
+    git stash
+
+    # perfom any backups
+    git push 
+    if [$? -ne 0]; then
+        echo "> $site push failed"
+    fi
+
+    # pull any changes
+    git pull
+    if [$? -ne 0]; then
+        echo "$site pull failed"
+    fi
+
+    echo "> done with $site"
+    # restore stashed files
+    git stash pop
+
+    # head to parent folder
+    cd ../
+
+    echo ""
+    echo "---------------------------------------------------------------------------------------------------"
+    echo ""
+done;
